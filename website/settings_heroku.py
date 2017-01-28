@@ -4,7 +4,7 @@ import dj_database_url
 
 ALLOWED_HOSTS = ['newsdiffs-wh.herokuapp.com']
 
-DEBUG = False
+DEBUG = True
 TEMPLATE_DEBUG = DEBUG
 
 ADMINS = (
