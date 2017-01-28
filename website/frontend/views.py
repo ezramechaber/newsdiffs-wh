@@ -70,9 +70,10 @@ def get_articles(source=None, distance=0):
     FROM version,
      (SELECT "Articles".id as article_id, MAX(T3.date) AS age, COUNT(T3.id) AS num_vs
       FROM "Articles" LEFT OUTER JOIN version T3 ON ("Articles".id = T3.article_id)
-      WHERE (T3.boring=FALSE AND age > %s AND age < %s AND num_vs > 1) GROUP BY "Articles".id) T, "Articles"
+      WHERE (T3.boring=FALSE) GROUP BY "Articles".id) T, "Articles"
     WHERE (version.article_id = "Articles".id) and
           (version.article_id = T.article_id) and
+          (age > %s AND age < %s AND num_vs > 1) and
           NOT version.boring
     ORDER BY date'''
 
