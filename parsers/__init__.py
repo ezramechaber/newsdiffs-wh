@@ -17,6 +17,7 @@
 #""".split()
 
 parsers = """
+nyt.NYTParser
 whitehouse.WhitehouseParser
 """.split()
 
