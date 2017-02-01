@@ -4,7 +4,7 @@ import sys
 
 # TODO(awong): Remove this HACK!
 reload(sys)
-sys.setdefaultencoding('utf8')
+sys.setdefaultencoding('latin-1')
 
 # Use dev settings if not otherwise configured.
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
