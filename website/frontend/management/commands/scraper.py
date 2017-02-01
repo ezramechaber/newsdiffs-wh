@@ -17,22 +17,27 @@ import diff_match_patch
 import parsers
 from parsers.baseparser import canonicalize, formatter, logger
 
-GIT_PROGRAM = 'git'
-
 from django.core.management.base import BaseCommand
 from optparse import make_option
 
 class Command(BaseCommand):
-    option_list = BaseCommand.option_list + (
-        make_option('--update',
+    def add_arguments(self, parser):
+        parser.add_argument(
+            '--update',
             action='store_true',
             default=False,
-            help='DEPRECATED; this is the default'),
-        make_option('--all',
+            help='DEPRECATED; this is the default')
+        parser.add_argument(
+            '--all',
             action='store_true',
             default=False,
-            help='Update _all_ stored articles'),
-        )
+            help='Update _all_ stored articles')
+        parser.add_argument(
+            '--fakeadiff',
+            action='store_true',
+            default=False,
+            help='Add a fake change to end of each article')
+
     help = '''Scrape websites.
 
 By default, scan front pages for new articles, and scan
@@ -43,6 +48,7 @@ scanned them recently, unless --all is passed.
 '''.strip()
 
     def handle(self, *args, **options):
+        # TODO(awong): Use some sort of sane logging libray.
         ch = logging.FileHandler('/tmp/newsdiffs_logging', mode='w')
         ch.setLevel(logging.DEBUG)
         ch.setFormatter(formatter)
@@ -53,13 +59,8 @@ scanned them recently, unless --all is passed.
         ch.setFormatter(formatter)
         logger.addHandler(ch)
 
-        for repo in all_git_repos():
-            cleanup_git_repo(repo)
-
-        todays_repo = get_and_make_git_repo()
-
-        update_articles(todays_repo)
-        update_versions(todays_repo, options['all'])
+        update_articles()
+        update_versions(options['all'], options['fakeadiff'])
 
 # Begin utility functions
 
@@ -115,57 +116,6 @@ def mkdir_p(path):
 def canonicalize_url(url):
     return url.split('?')[0].split('#')[0].strip()
 
-class IndexLockError(OSError):
-    pass
-
-def make_new_git_repo(full_dir):
-    mkdir_p(full_dir)
-    tmpfile = os.path.join(full_dir, 'x')
-    open(tmpfile, 'w').close()
-
-    try:
-        subprocess.check_output([GIT_PROGRAM, 'init',], cwd=full_dir)
-        subprocess.check_output([GIT_PROGRAM, 'config', 'user.name', 'scraper'], cwd=full_dir)
-        subprocess.check_output([GIT_PROGRAM, 'config', 'user.email', 'noreply@example.com'], cwd=full_dir)
-        subprocess.check_output([GIT_PROGRAM, 'add', tmpfile], cwd=full_dir)
-        subprocess.check_output([GIT_PROGRAM, 'commit', '-m', 'Initial commit'],
-                                cwd=full_dir)
-    except subprocess.CalledProcessError as e:
-        raise
-
-def get_and_make_git_repo():
-    result = time.strftime('%Y-%m', time.localtime())
-    full_path = models.GIT_DIR+result
-    if not os.path.exists(full_path+'/.git'):
-        make_new_git_repo(full_path)
-    return result
-
-def all_git_repos():
-    import glob
-    return glob.glob(models.GIT_DIR+'*')
-
-def run_git_command(command, git_dir, max_timeout=15):
-    """Run a git command like ['show', filename] and return the output.
-
-    First, wait up to max_timeout seconds for the index.lock file to go away.
-    If the index.lock file remains, raise an IndexLockError.
-
-    Still have a race condition if two programs run this at the same time.
-    """
-    end_time = time.time() + max_timeout
-    delay = 0.1
-    lock_file = os.path.join(git_dir, '.git/index.lock')
-    while os.path.exists(lock_file):
-        if time.time() < end_time - delay:
-            time.sleep(delay)
-        else:
-            raise IndexLockError('Git index.lock file exists for %s seconds'
-                                 % max_timeout)
-    output =  subprocess.check_output([GIT_PROGRAM] + command,
-                                      cwd=git_dir,
-                                      stderr=subprocess.STDOUT)
-    return output
-
 def get_all_article_urls():
     ans = set()
     for parser in parsers.parsers:
@@ -217,85 +167,6 @@ def get_diff_info(old, new):
     chars_removed = sum(len(text) for (sign, text) in diff if sign == -1)
     return dict(chars_added=chars_added, chars_removed=chars_removed)
 
-def add_to_git_repo(data, filename, article):
-    start_time = time.time()
-
-    #Don't use full path because it can exceed the maximum filename length
-    #full_path = os.path.join(models.GIT_DIR, filename)
-    os.chdir(article.full_git_dir)
-    mkdir_p(os.path.dirname(filename))
-
-    boring = False
-    diff_info = None
-
-    try:
-        previous = run_git_command(['show', 'HEAD:'+filename], article.full_git_dir)
-    except subprocess.CalledProcessError as e:
-        if (e.output.endswith("does not exist in 'HEAD'\n") or
-            e.output.endswith("exists on disk, but not in 'HEAD'.\n")):
-            already_exists = False
-        else:
-            raise
-    else:
-        already_exists = True
-
-
-    open(filename, 'w').write(data)
-
-    if already_exists:
-        if previous == data:
-            logger.debug('Article matches current version in repo')
-            return None, None, None
-
-        #Now check how many times this same version has appeared before
-        my_hash = run_git_command(['hash-object', filename],
-                                  article.full_git_dir).strip()
-
-        commits = [v.v for v in article.versions()]
-        if len(commits) > 2:
-            logger.debug('Checking for duplicates among %s commits',
-                          len(commits))
-            def get_hash(version):
-                """Return the SHA1 hash of filename in a given version"""
-                output = run_git_command(['ls-tree', '-r', version, filename],
-                                         article.full_git_dir)
-                return output.split()[2]
-            hashes = map(get_hash, commits)
-
-            number_equal = sum(1 for h in hashes if h == my_hash)
-
-            logger.debug('Got %s', number_equal)
-
-            if number_equal >= 2: #Refuse to list a version more than twice
-                run_git_command(['checkout', filename], article.full_git_dir)
-                return None, None, None
-
-        if is_boring(previous, data):
-            boring = True
-        else:
-            diff_info = get_diff_info(previous, data)
-
-    run_git_command(['add', filename], article.full_git_dir)
-    if not already_exists:
-        commit_message = 'Adding file %s' % filename
-    else:
-        commit_message = 'Change to %s' % filename
-    logger.debug('Running git commit... %s', time.time()-start_time)
-    run_git_command(['commit', filename, '-m', commit_message],
-                    article.full_git_dir)
-    logger.debug('git revlist... %s', time.time()-start_time)
-
-    # Now figure out what the commit ID was.
-    # I would like this to be "git rev-list HEAD -n1 filename"
-    # unfortunately, this command is slow: it doesn't abort after the
-    # first line is output.  Without filename, it does abort; therefore
-    # we do this and hope no intervening commit occurs.
-    # (looks like the slowness is fixed in git HEAD)
-    v = run_git_command(['rev-list', 'HEAD', '-n1'],
-                        article.full_git_dir).strip()
-    logger.debug('done %s', time.time()-start_time)
-    return v, boring, diff_info
-
 
 def load_article(url):
     try:
@@ -316,34 +187,40 @@ def load_article(url):
         return
     return parsed_article
 
-#Update url in git
 #Return whether it changed
-def update_article(article):
+def update_article(article, fakeadiff=False):
     parsed_article = load_article(article.url)
     if parsed_article is None:
         return
     to_store = unicode(parsed_article).encode('utf8')
     t = datetime.now()
+    if fakeadiff:
+        to_store = '~~ FAKE DIFF ~~\n%s ~~ %s' % (to_store, t)
     logger.debug('Article parsed; trying to store')
-    v, boring, diff_info = add_to_git_repo(to_store,
-                                           article.filename(),
-                                           article)
-    if v:
-        logger.info('Modifying! new blob: %s', v)
-        v_row = models.Version(v=v,
-                               boring=boring,
-                               title=parsed_article.title,
-                               byline=parsed_article.byline,
-                               date=t,
-                               article=article,
-                               )
-        v_row.diff_info = diff_info
-        v_row.save()
-        if not boring:
-            article.last_update = t
-            article.save()
+    textblob = models.TextBlob.create_or_get(to_store)
 
-def update_articles(todays_git_dir):
+    boring = False
+    # TODO(awong): Find previous version and store?
+    diff_info = None
+    prev = models.Version.objects.filter(article=article).order_by('-date').first()
+    if prev:
+        boring = prev.text.blob == to_store
+        diff_info = get_diff_info(prev.text.blob, to_store)
+
+    v_row = models.Version(text = textblob,
+                           boring=boring,
+                           title=parsed_article.title,
+                           byline=parsed_article.byline,
+                           date=t,
+                           article=article,
+                           )
+    v_row.diff_info = diff_info
+    v_row.save()
+    if not boring:
+        article.last_update = t
+        article.save()
+
+def update_articles():
     logger.info('Starting scraper; looking for new URLs')
     all_urls = get_all_article_urls()
     logger.info('Got all %s urls; storing to database' % len(all_urls))
@@ -353,7 +230,7 @@ def update_articles(todays_git_dir):
             continue
         if not models.Article.objects.filter(url=url).count():
             logger.debug('Adding!')
-            models.Article(url=url, git_dir=todays_git_dir).save()
+            models.Article(url=url).save()
     logger.info('Done storing to database')
 
 def get_update_delay(minutes_since_update):
@@ -371,9 +248,10 @@ def get_update_delay(minutes_since_update):
     else:
         return 60*24*365*1e5  #ignore old articles
 
-def update_versions(todays_repo, do_all=False):
+def update_versions(do_all=False, fakeadiff=False):
     logger.info('Looking for articles to check')
-    articles = list(models.Article.objects.exclude(git_dir='old'))
+    # TODO(awong): This loads all articles at once instead of using a cusor. Why?
+    articles = list(models.Article.objects.all())
     total_articles = len(articles)
 
     update_priority = lambda x: x.minutes_since_check() * 1. / get_update_delay(x.minutes_since_update())
@@ -382,19 +260,6 @@ def update_versions(todays_repo, do_all=False):
 
     logger.info('Checking %s of %s articles', len(articles), total_articles)
 
-    # Do git gc at the beginning, so if we're falling behind and killed
-    # it still happens and I don't run out of quota. =)
-    logger.info('Starting with gc:')
-    try:
-        run_git_command(['gc'], models.GIT_DIR + todays_repo)
-    except subprocess.CalledProcessError as e:
-        print >> sys.stderr, 'Error on initial gc!'
-        print >> sys.stderr, 'Output was """'
-        print >> sys.stderr, e.output
-        print >> sys.stderr, '"""'
-        raise
-
-    logger.info('Done!')
     for i, article in enumerate(articles):
         logger.debug('Woo: %s %s %s (%s/%s)',
                      article.minutes_since_update(),
@@ -407,7 +272,7 @@ def update_versions(todays_repo, do_all=False):
 
         article.last_check = datetime.now()
         try:
-            update_article(article)
+            update_article(article, fakeadiff)
         except Exception, e:
             if isinstance(e, subprocess.CalledProcessError):
                 logger.error('CalledProcessError when updating %s', article.url)
@@ -417,21 +282,7 @@ def update_versions(todays_repo, do_all=False):
 
             logger.error(traceback.format_exc())
         article.save()
-    #logger.info('Ending with gc:')
-    #run_git_command(['gc'])
     logger.info('Done!')
-
-#Remove index.lock if 5 minutes old
-def cleanup_git_repo(git_dir):
-    for name in ['.git/index.lock', '.git/refs/heads/master.lock', '.git/gc.pid.lock']:
-        fname = os.path.join(git_dir, name)
-        try:
-            stat = os.stat(fname)
-        except OSError:
-            return
-        age = time.time() - stat.st_ctime
-        if age > 60*5:
-            os.remove(fname)
 
 if __name__ == '__main__':
     print >> sys.stderr, "Try `python website/manage.py scraper`."

@@ -70,10 +70,6 @@ def get_articles(source=None, distance=0):
     # TODO(awong): Is this really just a group-by gone horridly wrong?
     article_dict = {}
     for v in all_versions:
-        a=models.Article(id=v.article_id,
-                         url=v.a_url, initial_date=v.a_initial_date,
-                         last_update=v.a_last_update, last_check=v.a_last_check)
-        v.article = a
         article_dict.setdefault(v.article, []).append(v)
 
     for article, versions in article_dict.items():
@@ -84,6 +80,8 @@ def get_articles(source=None, distance=0):
         if 'blogs.nytimes.com' in url: #XXX temporary
             continue
 
+        # TODO(awong): Show first draft pages, and also deletes both of which
+        # may have version 1.
         if len(versions) < 2:
             continue
         rowinfo = get_rowinfo(article, versions)
@@ -185,8 +183,8 @@ def diffview(request, vid1, vid2, urlarg):
     # urlarg is unused, and only for readability
     # Could be strict and enforce urlarg == article.filename()
     try:
-        v1 = Version.objects.get(text__pk=int(vid1))
-        v2 = Version.objects.get(text__pk=int(vid2))
+        v1 = Version.objects.get(id=int(vid1))
+        v2 = Version.objects.get(id=int(vid2))
     except Version.DoesNotExist:
         raise Http404
 
@@ -204,7 +202,7 @@ def diffview(request, vid1, vid2, urlarg):
     texts = []
 
     for v in (v1, v2):
-        texts.append(v.text.blob())
+        texts.append(v.text.blob)
         dates.append(v.date.strftime(OUT_FORMAT))
 
         indices = [i for i, x in versions.items() if x == v]

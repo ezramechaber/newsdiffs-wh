@@ -63,7 +63,7 @@ class Article(models.Model):
 class TextBlob(models.Model):
     """Stores a text blob, most often an article body, indexed by SHA-1 hash."""
     class Meta:
-        db_table = 'text_blob'
+        db_table = 'text_blobs'
 
     # Use a Sha256 content hash.
     key = models.CharField(max_length=64, primary_key=True)
@@ -71,17 +71,21 @@ class TextBlob(models.Model):
 
     @classmethod
     def create_or_get(cls, text_to_insert):
-        content_hash = hashlib.sha256(text_to_insert)
+        content_hash = hashlib.sha256(text_to_insert).hexdigest()
         result = cls.objects.filter(key=content_hash)
         if len(result) == 0:
-            return cls(key=content_hash, blob=text_to_insert)
+            textblob = cls(key=content_hash, blob=text_to_insert)
+            textblob.save()
+            return textblob
         return result[0]
 
 
 class Version(models.Model):
     class Meta:
-        db_table = 'version'
+        db_table = 'versions'
+        # TODO(awong): This get_latest_by seems useless.
         get_latest_by = 'date'
+        # TODO(awong): add index of article & date. Scraper uses this.
 
     article = models.ForeignKey(Article, null=False)
     title = models.CharField(max_length=255, blank=False)
