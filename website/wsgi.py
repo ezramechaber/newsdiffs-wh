@@ -3,6 +3,10 @@
 import os
 import sys
 
+# TODO(awong): Remove this HACK!
+reload(sys)
+sys.setdefaultencoding('utf8')
+
 # START UGLY COPY FROM mysite.fcgi
 THIS_DIR = os.path.dirname(os.path.realpath(__file__))
 ROOT_DIR = os.path.dirname(os.path.join(THIS_DIR, '..'))

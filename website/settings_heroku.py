@@ -1,6 +1,9 @@
 # Django settings for the newsdiffs project.
 
+import os
 import dj_database_url
+
+PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 
 ALLOWED_HOSTS = ['newsdiffs-wh.herokuapp.com']
 
@@ -84,8 +87,6 @@ MIDDLEWARE_CLASSES = (
 
 ROOT_URLCONF = 'urls'
 
-STATIC_URL = '/static/'
-
 INSTALLED_APPS = (
     'frontend',
     'django.contrib.contenttypes',
@@ -93,6 +94,9 @@ INSTALLED_APPS = (
     'django.contrib.sites',
     'django.contrib.staticfiles',
 )
+
+STATIC_ROOT = PROJECT_ROOT
+STATIC_URL = '/static/'
 
 # TODO(awong): Need to create a cache table for this to work.
 #CACHES = {
