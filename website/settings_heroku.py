@@ -84,7 +84,6 @@ MIDDLEWARE_CLASSES = (
 
 ROOT_URLCONF = 'urls'
 
-STATIC_ROOT = '/Users/awong/src/Digital44/newsdiffs-wh/website'
 STATIC_URL = '/static/'
 
 INSTALLED_APPS = (
