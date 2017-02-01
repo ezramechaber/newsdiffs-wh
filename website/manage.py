@@ -2,6 +2,10 @@
 import os
 import sys
 
+# TODO(awong): Remove this HACK!
+reload(sys)
+sys.setdefaultencoding('latin-1')
+
 # Use dev settings if not otherwise configured.
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 try:
@@ -10,7 +14,7 @@ except OSError:
     pass
 
 if __name__ == "__main__":
-    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "website.settings")
+    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings")
     sys.path.append(os.path.dirname(os.getcwd()))
     from django.core.management import execute_from_command_line
 
