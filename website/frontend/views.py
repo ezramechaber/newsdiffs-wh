@@ -53,32 +53,21 @@ def get_last_update(source):
         return datetime.datetime.now()
 
 def get_articles(source=None, distance=0):
+    """Get all articles for a given |source| for |distance| number of days.
+
+    Returns [(article, last_version, versions)]
+    """
     articles = []
     rx = re.compile(r'^https?://(?:[^/]*\.)%s/' % source if source else '')
 
+    # TODO(awong): What is distance and how does this stuff get calculated?
     pagelength = datetime.timedelta(days=1)
     end_date = datetime.datetime.now() - distance * pagelength
     start_date = end_date - pagelength
 
-    print 'Asking query'
-    version_query = '''SELECT
-    version.id, version.article_id, version.v, version.title,
-      version.byline, version.date, version.boring, version.diff_json,
-      T.age as age,
-      articles.url as a_url, articles.initial_date as a_initial_date,
-      articles.last_update as a_last_update, articles.last_check as a_last_check
-    FROM version,
-     (SELECT articles.id as article_id, MAX(T3.date) AS age, COUNT(T3.id) AS num_vs
-      FROM articles LEFT OUTER JOIN version T3 ON (articles.id = T3.article_id)
-      WHERE (T3.boring=FALSE) GROUP BY articles.id) T, articles
-    WHERE (version.article_id = articles.id) and
-          (version.article_id = T.article_id) and
-          (age > %s AND age < %s AND num_vs > 1) and
-          NOT version.boring
-    ORDER BY date'''
+    all_versions = Version.objects.filter(date__range=[start_date, end_date]).select_related('article')
 
-    all_versions = models.Version.objects.raw(version_query,
-                                              (start_date, end_date))
+    # TODO(awong): Is this really just a group-by gone horridly wrong?
     article_dict = {}
     for v in all_versions:
         a=models.Article(id=v.article_id,
@@ -115,7 +104,7 @@ def is_valid_domain(domain):
 def browse(request, source=''):
     if source not in SOURCES + ['']:
         raise Http404
-    pagestr=request.REQUEST.get('page', '1')
+    pagestr=request.GET.get('page', '1')
     try:
         page = int(pagestr)
     except ValueError:
@@ -144,7 +133,7 @@ def browse(request, source=''):
 def feed(request, source=''):
     if source not in SOURCES + ['']:
         raise Http404
-    pagestr=request.REQUEST.get('page', '1')
+    pagestr=request.GET.get('page', '1')
     try:
         page = int(pagestr)
     except ValueError:
@@ -169,9 +158,9 @@ def feed(request, source=''):
 
 def old_diffview(request):
     """Support for legacy diff urls"""
-    url = request.REQUEST.get('url')
-    v1tag = request.REQUEST.get('v1')
-    v2tag = request.REQUEST.get('v2')
+    url = request.GET.get('url')
+    v1tag = request.GET.get('v1')
+    v2tag = request.GET.get('v2')
     if url is None or v1tag is None or v2tag is None:
         return HttpResponseRedirect(reverse(front))
 
@@ -288,7 +277,7 @@ def prepend_http(url):
 
 
 def article_history(request, urlarg=''):
-    url = request.REQUEST.get('url') # this is the deprecated interface.
+    url = request.GET.get('url') # this is the deprecated interface.
     if url is None:
         url = urlarg
     if len(url) == 0:
@@ -349,9 +338,9 @@ def json_view(request, vid):
     return HttpResponse(json.dumps(data), mimetype="application/json")
 
 def upvote(request):
-    article_url = request.REQUEST.get('article_url')
-    diff_v1 = request.REQUEST.get('diff_v1')
-    diff_v2 = request.REQUEST.get('diff_v2')
+    article_url = request.GET.get('article_url')
+    diff_v1 = request.GET.get('diff_v1')
+    diff_v2 = request.GET.get('diff_v2')
     remote_ip = request.META.get('REMOTE_ADDR')
     article_id = Article.objects.get(url=article_url).id
     models.Upvote(article_id=article_id, diff_v1=diff_v1, diff_v2=diff_v2, creation_time=datetime.datetime.now(), upvoter_ip=remote_ip).save()
