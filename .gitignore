@@ -1,7 +1,6 @@
-/articles
-
 *~
 *.py[co]
+*.sw[op]
 
 # Packages
 *.egg
@@ -11,9 +10,6 @@ build
 venv
 eggs
 parts
-bin
-var
-sdist
 develop-eggs
 .installed.cfg
 
@@ -24,11 +20,5 @@ pip-log.txt
 .coverage
 .tox
 
-#Translations
-*.mo
-
-#Mr Developer
-.mr.developer.cfg
-
 newsdiffs.db
-database_settings.py
+website/staticfiles
