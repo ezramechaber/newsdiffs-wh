@@ -166,7 +166,8 @@ def update_article(article, fakeadiff=False):
                                date=t,
                                article=article,
                                )
-        v_row.diff_info = get_diff_info(prev.text.blob, to_store) if prev
+        if prev is not None:
+            v_row.diff_info = get_diff_info(prev.text.blob, to_store)
         v_row.save()
         article.last_update = t
         article.save()
