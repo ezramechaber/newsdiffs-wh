@@ -16,7 +16,7 @@
     dmp.Diff_ShowPara = false;
     var diff = dmp.diff_main(text1, text2);
     dmp.diff_cleanupSemantic(diff);
-    $('#compare')[0].innerHTML = dmp.diff_prettyHtml(diff);
+    document.getElementById('compare').innerHTML = dmp.diff_prettyHtml(diff);
   });
 </script>
 

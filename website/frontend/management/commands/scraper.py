@@ -143,7 +143,7 @@ def update_article(article, fakeadiff=False):
     parsed_article = load_article(article.url)
     if parsed_article is None:
         return
-    to_store = unicode(parsed_article).encode('utf8')
+    to_store = unicode(parsed_article, errors="replace").encode('utf8')
     t = datetime.now()
     if fakeadiff:
         to_store = '~~ FAKE DIFF ~~\n%s ~~ %s' % (to_store, t)
@@ -151,7 +151,6 @@ def update_article(article, fakeadiff=False):
     textblob = models.TextBlob.create_or_get(to_store)
 
     boring = False
-    # TODO(awong): Find previous version and store?
     diff_info = None
     prev = models.Version.objects.filter(article=article).order_by('-date').first()
     if prev:
