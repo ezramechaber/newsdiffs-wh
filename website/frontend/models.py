@@ -75,7 +75,6 @@ class TextBlob(models.Model):
         result = cls.objects.filter(key=content_hash)
         if len(result) == 0:
             textblob = cls(key=content_hash, blob=text_to_insert)
-            textblob.save()
             return textblob
         return result[0]
 

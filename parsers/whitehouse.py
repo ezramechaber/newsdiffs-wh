@@ -67,12 +67,12 @@ class WhitehouseParser(BaseParser):
         self.title = title['content']
         self.byline = ''
         self.date = ''
-        published_time = dateutil.parser.parse(soup.find('meta', property='article:published_time')['content'])
+        published_time = soup.find('meta', property='article:published_time')
         if published_time is not None:
-          self.date = published_time.strftime(DATE_FORMAT)
+            self.date = dateutil.parser.parse(published_time['content']).strftime(DATE_FORMAT)
 
         div = soup.find('div', 'pane-node-field-forall-body')
         if div is None:
             self.real_article = False
             return
-        self.body = u'\n\n'.join([unicode(x.getText().strip()) for x in div.findAll('p')])
+        self.body = '' + u'\n\n'.join([unicode(x.getText().strip()) for x in div.findAll('p')])
