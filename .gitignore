@@ -1,5 +1,6 @@
 *~
 *.py[co]
+*.sw[op]
 
 # Packages
 *.egg
@@ -20,3 +21,4 @@ pip-log.txt
 .tox
 
 newsdiffs.db
+website/staticfiles

@@ -201,6 +201,8 @@ def diffview(request, vid1, vid2, urlarg):
     dates = []
     texts = []
 
+    print "V1: %s" % v1.text.blob
+    print "V2: %s" % v2.text.blob
     for v in (v1, v2):
         texts.append(v.text.blob)
         dates.append(v.date.strftime(OUT_FORMAT))

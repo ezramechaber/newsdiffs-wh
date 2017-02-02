@@ -75,4 +75,4 @@ class WhitehouseParser(BaseParser):
         if div is None:
             self.real_article = False
             return
-        self.body = u'\n\n'.join([unicode(x.getText().strip(), errors='replace') for x in div.findAll('p')])
+        self.body = u'\n\n'.join([unicode.strip(x.getText()) for x in div.findAll('p')])
