@@ -5,7 +5,7 @@
 
 {% include "find_by_uri.html" %}
 
-<a href="http://newsdiffs.org/browse"><img 
+<a href="http://www.tracktrumpschanges.org/browse"><img 
 src="https://phaven-prod.s3.amazonaws.com/files/image_part/asset/802050/slGF-1I5TqAsI_01Z9N8hnAv85o/medium_Screen_shot_2012-06-18_at_5.10.png" 
 style="padding:10px; margin-left:25px; margin-top:10px; float:right" width="400"></a>	
 		
@@ -16,17 +16,13 @@ style="padding:10px; margin-left:25px; margin-top:10px; float:right" width="400"
 
 <p><strong>Track Trump's Changes keeps track of changes made to government websites.</strong></p>
 
-<p>We know Donald Trump plays fast and loose with his words (even if they're the best ones). Using the open source code from NewsDiffs, we're keeping track of what changes on a number of .gov sites.</p>
+<p>We know Donald Trump plays fast and loose with his words (even if they're the best ones). Using the open source code from NewsDiffs, we're keeping track of what changes on whitehouse.gov.</p>
 
 <p>Since Donald Trump took office, climate change pages have disappeared, LGBT protections pages have vanished, and misleading stats about our cities' murder rates have been quietly updated. Track Trump's Changes wants to give citizens the power to see what's changing in real-time.<p>
  
-<p>Right now we're tracking {% for source in sources|slice:":-1" %}
-<a href="{% url 'browse' source %}">{{source}}</a>,
-{% endfor %}
-and
-<a href="{% url 'browse' sources|last %}">{{sources|last}}</a>. Are we missing one? <a href="https://docs.google.com/forms/d/e/1FAIpQLSeDLWb-Dj5mP374vgw3-cnVySrnKMahUWizv7CAZDwvF-nKFg/viewform">Tell us what we should add</a>.
+<p>Right now we're tracking <a href="http://tracktrumpschanges.org/browse/whitehouse.gov">whitehouse.gov</a>. Should we add another government site? <a href="https://docs.google.com/forms/d/e/1FAIpQLSeDLWb-Dj5mP374vgw3-cnVySrnKMahUWizv7CAZDwvF-nKFg/viewform">Tell us here</a>.
 
-<p>You can <a href="http://newsdiffs.org/browse/">browse</a> the full list of articles. If you are a developer, you can check out the <a href="https://github.com/ezramechaber/newsdiffs-wh">Github repository</a>, based on the wonderful work of <a href="https://github.com/ecprice/newsdiffs">Newsdiffs</a>.</p>
+<p>You can <a href="http://tracktrumpschanges.org/browse">browse</a> the full list of articles. If you are a developer, you can check out the <a href="https://github.com/digital44/newsdiffs-wh">Github repository</a>, based on the wonderful work of <a href="https://github.com/ecprice/newsdiffs">Newsdiffs</a>.</p>
 
 
 <p>	
