@@ -143,11 +143,11 @@ def update_article(article, fakeadiff=False):
     parsed_article = load_article(article.url)
     if parsed_article is None:
         return
-    to_store = unicode(parsed_article).encode('utf8')
     t = datetime.now()
     if fakeadiff:
-        to_store = u'~~ FAKE DIFF ~~\n%s ~~ %s' % (to_store, t)
+        parsed_article = u'~~ FAKE DIFF ~~\n%s ~~ %s' % (parsed_article, t)
     logger.debug('Article parsed; trying to store')
+    to_store = unicode(parsed_article).encode('utf8')
     textblob = models.TextBlob.create_or_get(to_store)
 
     boring = False
