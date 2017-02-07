@@ -65,7 +65,8 @@ def get_articles(source=None, distance=0):
     end_date = datetime.datetime.now() - distance * pagelength
     start_date = end_date - pagelength
 
-    all_versions = Version.objects.filter(date__range=[start_date, end_date]).select_related('article')
+    #all_versions = Version.objects.filter(date__range=[start_date, end_date]).select_related('article')
+    all_versions = Version.objects.all().select_related('article')
 
     # TODO(awong): Is this really just a group-by gone horridly wrong?
     article_dict = {}
@@ -107,11 +108,6 @@ def browse(request, source=''):
         page = int(pagestr)
     except ValueError:
         page = 1
-
-    # Temporarily disable browsing past the first page, since it was
-    # overloading the server.
-    if page != 1:
-        return HttpResponseRedirect(reverse(browse))
 
     first_update = get_first_update(source)
     num_pages = (datetime.datetime.now() - first_update).days + 1
